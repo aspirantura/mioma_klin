@@ -2,9 +2,9 @@ import streamlit as st
 import numpy as np
 
 # Настройка страницы
-st.set_page_config(page_title="Прогноз рецидива миомы", page_icon="⚕️")
+st.set_page_config(page_title="Прогноз рецидива миомы")
 
-st.title("⚕️ Расчет риска рецидива миомы матки")
+st.title("Расчет риска рецидива миомы матки")
 st.write("Интегральная модель: Клиника + Морфология + ИГХ")
 
 # Создаем форму для ввода данных
