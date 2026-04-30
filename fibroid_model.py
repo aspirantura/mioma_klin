@@ -1,50 +1,60 @@
+import streamlit as st
 import numpy as np
-import pandas as pd
-from sklearn.linear_model import LogisticRegression
-import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, auc
 
-class FibroidRecurrencePredictor:
-    """
-    Интегральная модель прогнозирования рецидива миомы матки.
-    Объединяет клинические, морфологические и ИГХ факторы.
-    """
-    def __init__(self):
-        # Коэффициенты на основе обученной модели (ваши веса)
-        self.feature_names = [
-            'Возраст_42_и_менее', 'Длительность_7лет', 'Отсутствие_родов',
-            'НГЭ', 'НЖО', 'Быстрый_рост', 'Фибриноидный_некроз',
-            'VEGF_высокий', 'TGF_beta_высокий'
-        ]
-        self.weights = np.array([1.25, 0.17, 0.85, 2.13, 2.47, 0.17, 1.48, 1.81, 0.99])
-        self.intercept = -4.5  # Базовый порог модели
-        
-    def sigmoid(self, z):
-        return 1 / (1 + np.exp(-z))
+# Настройка страницы
+st.set_page_config(page_title="Прогноз рецидива миомы", page_icon="⚕️")
 
-    def predict_probability(self, features):
-        """
-        features: dict или list факторов (0 или 1)
-        """
-        z = np.dot(features, self.weights) + self.intercept
-        return self.sigmoid(z)
+st.title("⚕️ Расчет риска рецидива миомы матки")
+st.write("Интегральная модель: Клиника + Морфология + ИГХ")
 
-    def get_risk_category(self, prob):
-        threshold = 0.25 # Порог из диссертации
-        if prob >= threshold:
-            return "ВЫСОКИЙ РИСК (Рекомендована адъювантная терапия)"
-        return "НИЗКИЙ РИСК"
-
-# Пример использования
-if __name__ == "__main__":
-    predictor = FibroidRecurrencePredictor()
+# Создаем форму для ввода данных
+with st.form("my_form"):
+    st.subheader("Клинико-анамнестические данные")
+    f0 = st.checkbox("Возраст 42 года и менее")
+    f1 = st.checkbox("Длительность заболевания 7 лет и более")
+    f2 = st.checkbox("Отсутствие родов в анамнезе")
+    f3 = st.checkbox("Наличие наружного генитального эндометриоза (НГЭ)")
+    f4 = st.checkbox("Наличие ожирения (НЖО/ИМТ > 25)")
     
-    # Данные новой пациентки: НГЭ(+), НЖО(+), VEGF(+) - типичный рецидив
-    sample_patient = [1, 0, 1, 1, 1, 0, 0, 1, 0] 
+    st.subheader("Морфология и ИГХ")
+    f5 = st.checkbox("Быстрый рост узла (до 6 мес)")
+    f6 = st.checkbox("Наличие фибриноидного некроза")
+    f7 = st.checkbox("Высокая экспрессия VEGF (>80%)")
+    f8 = st.checkbox("Высокая экспрессия TGF-beta (>50%)")
     
-    p = predictor.predict_probability(sample_patient)
-    risk = predictor.get_risk_category(p)
+    submit_button = st.form_submit_button(label='Рассчитать риск')
+
+# Логика расчета (ваши коэффициенты)
+if submit_button:
+    # Веса из вашей модели
+    weights = np.array([1.25, 0.17, 0.85, 2.13, 2.47, 0.17, 1.48, 1.81, 0.99])
+    intercept = -4.5  # Базовый коэффициент (отсечка)
     
-    print(f"Прогноз для пациента:")
-    print(f"Вероятность рецидива: {p:.2%}")
-    print(f"Категория: {risk}")
+    # Собираем введенные данные
+    inputs = np.array([f0, f1, f2, f3, f4, f5, f6, f7, f8]).astype(int)
+    
+    # Считаем Z и вероятность
+    z = np.dot(inputs, weights) + intercept
+    probability = 1 / (1 + np.exp(-z))
+    
+    # Вывод результата
+    st.divider()
+    st.subheader(f"Вероятность рецидива: {probability:.1%}")
+    
+    # Порог из вашей диссертации 0.25
+    if probability >= 0.25:
+        st.error("ГРУППА ВЫСОКОГО РИСКА")
+        st.write("❗ Рекомендовано: адъювантная терапия и усиленный мониторинг.")
+    else:
+        st.success("ГРУППА НИЗКОГО РИСКА")
+        st.write("✅ Рекомендовано: стандартное диспансерное наблюдение.")
+
+    # Дополнительная информация для врача
+    with st.expander("Посмотреть вклад факторов"):
+        st.write("Наибольшее влияние в данном расчете оказали:")
+        factors = ["Возраст", "Длительность", "Отсутствие родов", "НГЭ", "НЖО", "Рост", "Некроз", "VEGF", "TGF-beta"]
+        for i, val in enumerate(inputs):
+            if val == 1:
+                st.write(f"- {factors[i]} (вес {weights[i]})")
+
+st.info("Модель обладает чувствительностью 95.7% и специфичностью 87.2%")
